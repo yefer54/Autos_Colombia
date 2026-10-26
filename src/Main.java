@@ -14,7 +14,7 @@ public class Main {
         try {
             servicio = new ParqueaderoService();
         } catch (Exception e) {
-            System.err.println("[ERROR CRÍTICO] No se pudo inicializar el servicio: " + e.getMessage());
+            System.err.println(" No se pudo inicializar el servicio: " + e.getMessage());
             e.printStackTrace();
             System.exit(1);
             return; 
