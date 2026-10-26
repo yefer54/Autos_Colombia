@@ -1,0 +1,12 @@
+[
+  {"numero": "1", "disponible": "false", "placaVehiculo": "ABC123"},
+  {"numero": "2", "disponible": "true", "placaVehiculo": ""},
+  {"numero": "3", "disponible": "true", "placaVehiculo": ""},
+  {"numero": "4", "disponible": "true", "placaVehiculo": ""},
+  {"numero": "5", "disponible": "true", "placaVehiculo": ""},
+  {"numero": "6", "disponible": "true", "placaVehiculo": ""},
+  {"numero": "7", "disponible": "true", "placaVehiculo": ""},
+  {"numero": "8", "disponible": "true", "placaVehiculo": ""},
+  {"numero": "9", "disponible": "true", "placaVehiculo": ""},
+  {"numero": "10", "disponible": "true", "placaVehiculo": ""}
+]
