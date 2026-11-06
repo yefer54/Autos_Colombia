@@ -1,12 +1,12 @@
 [
-  {"numero": "1", "disponible": "false", "placaVehiculo": "ABC123"},
-  {"numero": "2", "disponible": "true", "placaVehiculo": ""},
-  {"numero": "3", "disponible": "true", "placaVehiculo": ""},
-  {"numero": "4", "disponible": "true", "placaVehiculo": ""},
-  {"numero": "5", "disponible": "true", "placaVehiculo": ""},
-  {"numero": "6", "disponible": "true", "placaVehiculo": ""},
-  {"numero": "7", "disponible": "true", "placaVehiculo": ""},
-  {"numero": "8", "disponible": "true", "placaVehiculo": ""},
-  {"numero": "9", "disponible": "true", "placaVehiculo": ""},
-  {"numero": "10", "disponible": "true", "placaVehiculo": ""}
+  {"numero": "1", "codigo": "C1", "disponible": "false", "habilitada": "true", "placaVehiculo": "ABC123"},
+  {"numero": "2", "codigo": "C2", "disponible": "true", "habilitada": "true", "placaVehiculo": ""},
+  {"numero": "3", "codigo": "C3", "disponible": "true", "habilitada": "true", "placaVehiculo": ""},
+  {"numero": "4", "codigo": "C4", "disponible": "true", "habilitada": "true", "placaVehiculo": ""},
+  {"numero": "5", "codigo": "C5", "disponible": "true", "habilitada": "true", "placaVehiculo": ""},
+  {"numero": "6", "codigo": "C6", "disponible": "true", "habilitada": "true", "placaVehiculo": ""},
+  {"numero": "7", "codigo": "C7", "disponible": "true", "habilitada": "true", "placaVehiculo": ""},
+  {"numero": "8", "codigo": "C8", "disponible": "true", "habilitada": "true", "placaVehiculo": ""},
+  {"numero": "9", "codigo": "C9", "disponible": "true", "habilitada": "true", "placaVehiculo": ""},
+  {"numero": "10", "codigo": "C10", "disponible": "true", "habilitada": "true", "placaVehiculo": ""}
 ]

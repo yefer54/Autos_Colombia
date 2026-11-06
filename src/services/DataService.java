@@ -1,62 +1,83 @@
 package services;
 
 import models.Celda;
+import models.Cliente;
 import models.Usuario;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+/**
+ * Servicio de persistencia de datos en archivos JSON.
+ * Implementa un parser JSON liviano (sin dependencias externas).
+ */
 public class DataService {
 
-    public static List<Usuario> cargarUsuarios(String rutaArchivo) {
+    public static List<Usuario> cargarUsuarios(String ruta) {
         List<Usuario> lista = new ArrayList<>();
-        String contenido = leerArchivo(rutaArchivo);
+        String contenido = leerArchivo(ruta);
         if (contenido == null || contenido.isBlank()) return lista;
-
-        List<Map<String, String>> objetos = parsearArrayJson(contenido);
-        for (Map<String, String> obj : objetos) {
+        for (Map<String, String> obj : parsearArrayJson(contenido)) {
             Usuario u = Usuario.fromJsonObject(obj);
             if (u != null) lista.add(u);
         }
         return lista;
     }
 
-    public static void guardarUsuarios(List<Usuario> usuarios, String rutaArchivo) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("[\n");
+    public static void guardarUsuarios(List<Usuario> usuarios, String ruta) {
+        StringBuilder sb = new StringBuilder("[\n");
         for (int i = 0; i < usuarios.size(); i++) {
             sb.append("  ").append(usuarios.get(i).toJsonString());
             if (i < usuarios.size() - 1) sb.append(",");
             sb.append("\n");
         }
         sb.append("]");
-        escribirArchivo(rutaArchivo, sb.toString());
+        escribirArchivo(ruta, sb.toString());
     }
 
-    public static List<Celda> cargarCeldas(String rutaArchivo) {
-        List<Celda> lista = new ArrayList<>();
-        String contenido = leerArchivo(rutaArchivo);
+    public static List<Cliente> cargarClientes(String ruta) {
+        List<Cliente> lista = new ArrayList<>();
+        String contenido = leerArchivo(ruta);
         if (contenido == null || contenido.isBlank()) return lista;
+        for (Map<String, String> obj : parsearArrayJson(contenido)) {
+            Cliente c = Cliente.fromJsonObject(obj);
+            if (c != null) lista.add(c);
+        }
+        return lista;
+    }
 
-        List<Map<String, String>> objetos = parsearArrayJson(contenido);
-        for (Map<String, String> obj : objetos) {
+    public static void guardarClientes(List<Cliente> clientes, String ruta) {
+        StringBuilder sb = new StringBuilder("[\n");
+        for (int i = 0; i < clientes.size(); i++) {
+            sb.append("  ").append(clientes.get(i).toJsonString());
+            if (i < clientes.size() - 1) sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("]");
+        escribirArchivo(ruta, sb.toString());
+    }
+
+    public static List<Celda> cargarCeldas(String ruta) {
+        List<Celda> lista = new ArrayList<>();
+        String contenido = leerArchivo(ruta);
+        if (contenido == null || contenido.isBlank()) return lista;
+        for (Map<String, String> obj : parsearArrayJson(contenido)) {
             Celda c = Celda.fromJsonObject(obj);
             if (c != null) lista.add(c);
         }
         return lista;
     }
 
-    public static void guardarCeldas(List<Celda> celdas, String rutaArchivo) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("[\n");
+    public static void guardarCeldas(List<Celda> celdas, String ruta) {
+        StringBuilder sb = new StringBuilder("[\n");
         for (int i = 0; i < celdas.size(); i++) {
             sb.append("  ").append(celdas.get(i).toJsonString());
             if (i < celdas.size() - 1) sb.append(",");
             sb.append("\n");
         }
         sb.append("]");
-        escribirArchivo(rutaArchivo, sb.toString());
+        escribirArchivo(ruta, sb.toString());
     }
 
     static List<Map<String, String>> parsearArrayJson(String json) {
@@ -68,9 +89,7 @@ public class DataService {
         if (inicioArray == -1 || finArray == -1 || inicioArray >= finArray) return resultado;
 
         String contenidoArray = json.substring(inicioArray + 1, finArray);
-
-        List<String> objetos = extraerObjetos(contenidoArray);
-        for (String obj : objetos) {
+        for (String obj : extraerObjetos(contenidoArray)) {
             Map<String, String> mapa = parsearObjeto(obj);
             if (!mapa.isEmpty()) resultado.add(mapa);
         }
@@ -106,30 +125,23 @@ public class DataService {
         if (contenido.startsWith("{")) contenido = contenido.substring(1);
         if (contenido.endsWith("}"))  contenido = contenido.substring(0, contenido.length() - 1);
 
-        List<String> pares = dividirPorComaFueraDeComillas(contenido);
-
-        for (String par : pares) {
+        for (String par : dividirPorComaFueraDeComillas(contenido)) {
             int dospuntos = indiceDospuntosDeKeyValue(par);
             if (dospuntos == -1) continue;
 
-            String clave = par.substring(0, dospuntos).trim();
-            String valor = par.substring(dospuntos + 1).trim();
+            String clave = eliminarComillas(par.substring(0, dospuntos).trim());
+            String valor = eliminarComillas(par.substring(dospuntos + 1).trim());
 
-            clave = eliminarComillas(clave);
-            valor = eliminarComillas(valor);
-
-            if (!clave.isEmpty()) {
-                mapa.put(clave, valor);
-            }
+            if (!clave.isEmpty()) mapa.put(clave, valor);
         }
         return mapa;
     }
 
     private static List<String> dividirPorComaFueraDeComillas(String texto) {
-        List<String> partes   = new ArrayList<>();
-        StringBuilder actual  = new StringBuilder();
-        boolean enComillas    = false;
-        boolean escapado      = false;
+        List<String>  partes    = new ArrayList<>();
+        StringBuilder actual    = new StringBuilder();
+        boolean       enComillas = false;
+        boolean       escapado   = false;
 
         for (int i = 0; i < texto.length(); i++) {
             char c = texto.charAt(i);
@@ -158,9 +170,9 @@ public class DataService {
         boolean escapado   = false;
         for (int i = 0; i < par.length(); i++) {
             char c = par.charAt(i);
-            if (escapado) { escapado = false; continue; }
-            if (c == '\\') { escapado = true; continue; }
-            if (c == '"')  { enComillas = !enComillas; continue; }
+            if (escapado)        { escapado = false; continue; }
+            if (c == '\\')       { escapado = true;  continue; }
+            if (c == '"')        { enComillas = !enComillas; continue; }
             if (c == ':' && !enComillas) return i;
         }
         return -1;
@@ -172,9 +184,7 @@ public class DataService {
         if (valor.startsWith("\"") && valor.endsWith("\"") && valor.length() >= 2) {
             valor = valor.substring(1, valor.length() - 1);
         }
-
-        valor = valor.replace("\\\"", "\"").replace("\\\\", "\\");
-        return valor;
+        return valor.replace("\\\"", "\"").replace("\\\\", "\\");
     }
 
     private static String leerArchivo(String rutaArchivo) {
@@ -185,28 +195,24 @@ public class DataService {
         try (BufferedReader br = new BufferedReader(
                 new InputStreamReader(new FileInputStream(archivo), StandardCharsets.UTF_8))) {
             String linea;
-            while ((linea = br.readLine()) != null) {
-                sb.append(linea).append("\n");
-            }
+            while ((linea = br.readLine()) != null) sb.append(linea).append("\n");
         } catch (IOException e) {
-            System.err.println("[ERROR] No se pudo leer el archivo: " + rutaArchivo + " → " + e.getMessage());
+            System.err.println("[ERROR] No se pudo leer: " + rutaArchivo + " → " + e.getMessage());
             return null;
         }
         return sb.toString();
     }
 
     private static void escribirArchivo(String rutaArchivo, String contenido) {
-        File archivo = new File(rutaArchivo);
+        File archivo   = new File(rutaArchivo);
         File directorio = archivo.getParentFile();
-        if (directorio != null && !directorio.exists()) {
-            directorio.mkdirs();
-        }
+        if (directorio != null && !directorio.exists()) directorio.mkdirs();
 
         try (BufferedWriter bw = new BufferedWriter(
                 new OutputStreamWriter(new FileOutputStream(archivo, false), StandardCharsets.UTF_8))) {
             bw.write(contenido);
         } catch (IOException e) {
-            System.err.println("[ERROR] No se pudo escribir el archivo: " + rutaArchivo + " → " + e.getMessage());
+            System.err.println("[ERROR] No se pudo escribir: " + rutaArchivo + " → " + e.getMessage());
         }
     }
 }
