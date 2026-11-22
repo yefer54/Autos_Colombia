@@ -19,6 +19,7 @@ public class Cliente {
 
     private String        placa;
     private String        nombrePropietario;
+    private String        documento;
     private String        telefono;
     private int           numeroCelda;
     private LocalDateTime fechaIngreso;
@@ -28,9 +29,16 @@ public class Cliente {
     public Cliente(String placa, String nombrePropietario, String telefono,
                    int numeroCelda, LocalDateTime fechaIngreso,
                    LocalDateTime fechaVencimiento, boolean activo) {
-        this.placa             = placa             != null ? placa.toUpperCase().trim()      : "";
-        this.nombrePropietario = nombrePropietario != null ? nombrePropietario.trim()        : "";
-        this.telefono          = telefono          != null ? telefono.trim()                 : "";
+        this(placa, nombrePropietario, "", telefono, numeroCelda, fechaIngreso, fechaVencimiento, activo);
+    }
+
+    public Cliente(String placa, String nombrePropietario, String documento,
+                   String telefono, int numeroCelda, LocalDateTime fechaIngreso,
+                   LocalDateTime fechaVencimiento, boolean activo) {
+        this.placa             = placa             != null ? placa.toUpperCase().trim() : "";
+        this.nombrePropietario = nombrePropietario != null ? nombrePropietario.trim()   : "";
+        this.documento         = documento         != null ? documento.trim()           : "";
+        this.telefono          = telefono          != null ? telefono.trim()            : "";
         this.numeroCelda       = numeroCelda;
         this.fechaIngreso      = fechaIngreso;
         this.fechaVencimiento  = fechaVencimiento;
@@ -39,6 +47,7 @@ public class Cliente {
 
     public String        getPlaca()             { return placa; }
     public String        getNombrePropietario()  { return nombrePropietario; }
+    public String        getDocumento()          { return documento; }
     public String        getTelefono()           { return telefono; }
     public int           getNumeroCelda()        { return numeroCelda; }
     public LocalDateTime getFechaIngreso()       { return fechaIngreso; }
@@ -47,6 +56,7 @@ public class Cliente {
 
     public void setPlaca(String v)                   { this.placa             = v != null ? v.toUpperCase().trim() : ""; }
     public void setNombrePropietario(String v)       { this.nombrePropietario = v != null ? v.trim() : ""; }
+    public void setDocumento(String v)               { this.documento         = v != null ? v.trim() : ""; }
     public void setTelefono(String v)                { this.telefono          = v != null ? v.trim() : ""; }
     public void setNumeroCelda(int v)                { this.numeroCelda       = v; }
     public void setFechaIngreso(LocalDateTime v)     { this.fechaIngreso      = v; }
@@ -63,12 +73,13 @@ public class Cliente {
         String ing = fechaIngreso     != null ? fechaIngreso.format(FMT_ALMACEN)     : "";
         String ven = fechaVencimiento != null ? fechaVencimiento.format(FMT_ALMACEN) : "";
         return "{"
-             + jf("placa",             placa)              + ", "
-             + jf("nombrePropietario", nombrePropietario)  + ", "
-             + jf("telefono",          telefono)           + ", "
+             + jf("placa",             placa)                       + ", "
+             + jf("nombrePropietario", nombrePropietario)           + ", "
+             + jf("documento",         documento)                   + ", "
+             + jf("telefono",          telefono)                    + ", "
              + jf("numeroCelda",       String.valueOf(numeroCelda)) + ", "
-             + jf("fechaIngreso",      ing)                + ", "
-             + jf("fechaVencimiento",  ven)                + ", "
+             + jf("fechaIngreso",      ing)                         + ", "
+             + jf("fechaVencimiento",  ven)                         + ", "
              + jf("activo",            String.valueOf(activo))
              + "}";
     }
@@ -81,6 +92,7 @@ public class Cliente {
         try {
             String placa  = map.getOrDefault("placa",             "").trim();
             String nombre = map.getOrDefault("nombrePropietario", "").trim();
+            String doc    = map.getOrDefault("documento",         "").trim();
             String tel    = map.getOrDefault("telefono",          "").trim();
             int    celda  = Integer.parseInt(map.getOrDefault("numeroCelda", "0").trim());
             String ingStr = map.getOrDefault("fechaIngreso",      "").trim();
@@ -89,7 +101,7 @@ public class Cliente {
             if (placa.isEmpty()) return null;
             LocalDateTime ing = ingStr.isEmpty() ? LocalDateTime.now()       : LocalDateTime.parse(ingStr, FMT_ALMACEN);
             LocalDateTime ven = venStr.isEmpty() ? ing.plusDays(30)          : LocalDateTime.parse(venStr, FMT_ALMACEN);
-            return new Cliente(placa, nombre, tel, celda, ing, ven, activo);
+            return new Cliente(placa, nombre, doc, tel, celda, ing, ven, activo);
         } catch (Exception e) {
             System.err.println("No se pudo parsear cliente: " + e.getMessage());
             return null;
@@ -104,6 +116,7 @@ public class Cliente {
         return "┌─────────────────────────────────────────┐\n"
              + "│  Placa         : " + pr(placa,             23) + "│\n"
              + "│  Propietario   : " + pr(nombrePropietario, 23) + "│\n"
+             + (documento.isEmpty() ? "" : ("│  Documento     : " + pr(documento, 23) + "│\n"))
              + "│  Teléfono      : " + pr(telefono,          23) + "│\n"
              + "│  Celda N°      : " + pr(String.valueOf(numeroCelda), 23) + "│\n"
              + "│  Ingreso       : " + pr(ing,               23) + "│\n"

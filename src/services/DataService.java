@@ -2,6 +2,8 @@ package services;
 
 import models.Celda;
 import models.Cliente;
+import models.MetodoPago;
+import models.Pago;
 import models.Usuario;
 
 import java.io.*;
@@ -74,6 +76,50 @@ public class DataService {
         for (int i = 0; i < celdas.size(); i++) {
             sb.append("  ").append(celdas.get(i).toJsonString());
             if (i < celdas.size() - 1) sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("]");
+        escribirArchivo(ruta, sb.toString());
+    }
+
+    public static List<MetodoPago> cargarMetodosPago(String ruta) {
+        List<MetodoPago> lista = new ArrayList<>();
+        String contenido = leerArchivo(ruta);
+        if (contenido == null || contenido.isBlank()) return lista;
+        for (Map<String, String> obj : parsearArrayJson(contenido)) {
+            MetodoPago mp = MetodoPago.fromJsonObject(obj);
+            if (mp != null) lista.add(mp);
+        }
+        return lista;
+    }
+
+    public static void guardarMetodosPago(List<MetodoPago> metodos, String ruta) {
+        StringBuilder sb = new StringBuilder("[\n");
+        for (int i = 0; i < metodos.size(); i++) {
+            sb.append("  ").append(metodos.get(i).toJsonString());
+            if (i < metodos.size() - 1) sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("]");
+        escribirArchivo(ruta, sb.toString());
+    }
+
+    public static List<Pago> cargarPagos(String ruta) {
+        List<Pago> lista = new ArrayList<>();
+        String contenido = leerArchivo(ruta);
+        if (contenido == null || contenido.isBlank()) return lista;
+        for (Map<String, String> obj : parsearArrayJson(contenido)) {
+            Pago p = Pago.fromJsonObject(obj);
+            if (p != null) lista.add(p);
+        }
+        return lista;
+    }
+
+    public static void guardarPagos(List<Pago> pagos, String ruta) {
+        StringBuilder sb = new StringBuilder("[\n");
+        for (int i = 0; i < pagos.size(); i++) {
+            sb.append("  ").append(pagos.get(i).toJsonString());
+            if (i < pagos.size() - 1) sb.append(",");
             sb.append("\n");
         }
         sb.append("]");

@@ -21,6 +21,8 @@ public class Main {
         System.out.println("  Celdas cargadas      : " + servicio.listarCeldas().size());
         System.out.println("  Usuarios del sistema : " + servicio.listarUsuarios().size());
         System.out.println("  Clientes registrados : " + servicio.listarClientes().size());
+        System.out.println("  Métodos de pago      : " + servicio.listarMetodosPago().size());
+        System.out.println("  Transacciones pagos  : " + servicio.listarPagos().size());
 
         Menu menu = new Menu(servicio);
         menu.iniciar();

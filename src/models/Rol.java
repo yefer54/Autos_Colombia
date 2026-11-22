@@ -2,12 +2,14 @@ package models;
 
 /**
  * Roles disponibles para los usuarios del sistema.
- * ADMIN  → acceso total (gestión de usuarios, celdas, asignaciones, mensualidades).
- * OPERARIO → acceso operativo (asignaciones, mensualidades, consultas).
+ * ADMIN    → acceso total (gestión de usuarios, celdas, asignaciones, mensualidades, pagos y métodos de pago).
+ * OPERARIO → acceso operativo (asignaciones, mensualidades, pagos, consultas).
+ * CLIENTE  → acceso cliente (consulta de su propio historial, pagos pendientes y comprobantes).
  */
 public enum Rol {
     ADMIN,
-    OPERARIO;
+    OPERARIO,
+    CLIENTE;
 
     /**
      * Convierte un String al enum correspondiente.

@@ -1,3 +1,5 @@
 [
-  {"documento": "0000", "nombre": "Administrador", "correo": "admin@autoscolombia.com", "contrasena": "admin123", "telefono": "0000000000", "rol": "ADMIN", "activo": "true"}
+  {"documento": "0000", "nombre": "Administrador", "correo": "admin@autoscolombia.com", "contrasena": "admin123", "telefono": "0000000000", "rol": "ADMIN", "activo": "true"},
+  {"documento": "1111", "nombre": "Carlos Operario", "correo": "operario@autoscolombia.com", "contrasena": "operario123", "telefono": "3001112233", "rol": "OPERARIO", "activo": "true"},
+  {"documento": "2222", "nombre": "Yeferson", "correo": "cliente@autoscolombia.com", "contrasena": "cliente123", "telefono": "123456789", "rol": "CLIENTE", "activo": "true"}
 ]

@@ -2,6 +2,10 @@ package ui;
 
 import models.Celda;
 import models.Cliente;
+import models.MetodoPago;
+import models.Pago;
+import models.PagoPendiente;
+import models.ResultadoPago;
 import models.Rol;
 import models.Usuario;
 import services.ParqueaderoService;
@@ -11,14 +15,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 
-/**
- * Interfaz de consola del sistema Parqueadero Autos Colombia.
- * Permite gestionar usuarios, celdas, asignaciones y mensualidades según el rol del usuario activo.
- */
+
 public class Menu {
 
-    private static final String LINEA_DOBLE  = "══════════════════════════════════════════════";
-    private static final String LINEA_SIMPLE = "──────────────────────────────────────────────";
+    private static final String LINEA_DOBLE  = "══════════════════════════════════════════════════════════════════════════════════";
+    private static final String LINEA_SIMPLE = "──────────────────────────────────────────────────────────────────────────────────";
 
     private final ParqueaderoService servicio;
     private final Scanner            scanner;
@@ -53,7 +54,6 @@ public class Menu {
         }
     }
 
-    /** Solicita credenciales de un usuario; retorna null si cancela o son inválidas. */
     private Usuario flujoLogin() {
         imprimirEncabezado("INICIO DE SESIÓN");
         System.out.println("  Ingrese sus credenciales.  (Escriba 0 en correo para cancelar)");
@@ -79,13 +79,16 @@ public class Menu {
     private void menuPrincipalLoop() {
         boolean salir = false;
         while (!salir) {
-            salir = (usuarioActual.getRol() == Rol.ADMIN)
-                    ? menuAdminLoop()
-                    : menuOperarioLoop();
+            if (usuarioActual.getRol() == Rol.ADMIN) {
+                salir = menuAdminLoop();
+            } else if (usuarioActual.getRol() == Rol.OPERARIO) {
+                salir = menuOperarioLoop();
+            } else {
+                salir = menuClienteLoop();
+            }
         }
     }
 
-    /** Menú principal del Administrador. */
     private boolean menuAdminLoop() {
         imprimirEncabezado("MENÚ PRINCIPAL — ADMINISTRADOR");
         System.out.println("  Usuario: " + usuarioActual.getNombre() + " (" + usuarioActual.getRol().name() + ")");
@@ -94,7 +97,8 @@ public class Menu {
         System.out.println("  2. Gestión de Celdas");
         System.out.println("  3. Asignaciones de Celdas");
         System.out.println("  4. Mensualidades / Clientes");
-        System.out.println("  5. Iniciar sesión / Cambiar de usuario");
+        System.out.println("  5. Gestión de Pagos");
+        System.out.println("  6. Iniciar sesión / Cambiar de usuario");
         System.out.println("  0. Salir");
         System.out.println(LINEA_SIMPLE);
 
@@ -103,35 +107,63 @@ public class Menu {
             case 2: menuCeldasLoop();        break;
             case 3: menuAsignacionesLoop();  break;
             case 4: menuMensualidadesLoop(); break;
-            case 5: cambiarUsuario();        break;
+            case 5: menuPagosLoop();         break;
+            case 6: cambiarUsuario();        break;
             case 0: return true;
             default: System.out.println("\n  [!] Opción no válida."); pausar();
         }
         return false;
     }
 
-    /** Menú principal del Operario (acceso restringido). */
     private boolean menuOperarioLoop() {
         imprimirEncabezado("MENÚ PRINCIPAL — OPERARIO");
         System.out.println("  Usuario: " + usuarioActual.getNombre() + " (" + usuarioActual.getRol().name() + ")");
         System.out.println(LINEA_SIMPLE);
         System.out.println("  1. Asignaciones de Celdas");
         System.out.println("  2. Mensualidades / Clientes");
-        System.out.println("  3. Ver celdas disponibles");
-        System.out.println("  4. Iniciar sesión / Cambiar de usuario");
+        System.out.println("  3. Gestión de Pagos");
+        System.out.println("  4. Ver celdas disponibles");
+        System.out.println("  5. Iniciar sesión / Cambiar de usuario");
         System.out.println("  0. Salir");
         System.out.println(LINEA_SIMPLE);
 
         switch (leerEnteroConPrompt("  Seleccione una opción: ")) {
             case 1: menuAsignacionesLoop();   break;
             case 2: menuMensualidadesLoop();  break;
-            case 3: flujoCeldasDisponibles(); break;
-            case 4: cambiarUsuario();         break;
+            case 3: menuPagosLoop();          break;
+            case 4: flujoCeldasDisponibles(); break;
+            case 5: cambiarUsuario();         break;
             case 0: return true;
             default: System.out.println("\n  [!] Opción no válida."); pausar();
         }
         return false;
     }
+
+    private boolean menuClienteLoop() {
+        imprimirEncabezado("PORTAL CLIENTE — AUTOS COLOMBIA");
+        System.out.println("  Usuario: " + usuarioActual.getNombre() + " (" + usuarioActual.getRol().name() + ")");
+        System.out.println(LINEA_SIMPLE);
+        System.out.println("  1. Consultar mi historial de pagos");
+        System.out.println("  2. Consultar mis pagos pendientes");
+        System.out.println("  3. Realizar pago de mensualidad");
+        System.out.println("  4. Consultar / Generar comprobante de pago");
+        System.out.println("  5. Iniciar sesión / Cambiar de usuario");
+        System.out.println("  0. Salir");
+        System.out.println(LINEA_SIMPLE);
+
+        switch (leerEnteroConPrompt("  Seleccione una opción: ")) {
+            case 1: flujoConsultarHistorialClienteAutenticado(); break;
+            case 2: flujoConsultarPagosPendientesCliente();      break;
+            case 3: flujoRealizarPago();                         break;
+            case 4: flujoGenerarComprobante();                   break;
+            case 5: cambiarUsuario();                            break;
+            case 0: return true;
+            default: System.out.println("\n  [!] Opción no válida."); pausar();
+        }
+        return false;
+    }
+
+
 
     private void menuUsuariosLoop() {
         boolean activo = true;
@@ -159,6 +191,7 @@ public class Menu {
         }
     }
 
+
     private void menuCeldasLoop() {
         boolean activo = true;
         while (activo) {
@@ -183,6 +216,8 @@ public class Menu {
         }
     }
 
+
+
     private void menuAsignacionesLoop() {
         boolean activo = true;
         while (activo) {
@@ -201,6 +236,7 @@ public class Menu {
         }
     }
 
+
     private void menuMensualidadesLoop() {
         boolean activo = true;
         while (activo) {
@@ -209,7 +245,7 @@ public class Menu {
             System.out.println("  2. Validar ingreso de vehículo");
             System.out.println("  3. Consultar lista de clientes");
             System.out.println("  4. Buscar cliente por placa");
-            System.out.println("  5. Renovar mensualidad");
+            System.out.println("  5. Renovar mensualidad (con pago)");
             System.out.println("  6. Eliminar cliente (mensualidad vencida)");
             System.out.println("  0. Volver");
             System.out.println(LINEA_SIMPLE);
@@ -227,7 +263,569 @@ public class Menu {
         }
     }
 
-    /** Registra un nuevo usuario solicitando todos los datos obligatorios. */
+
+    private void menuPagosLoop() {
+        boolean activo = true;
+        while (activo) {
+            boolean esAdmin = (usuarioActual.getRol() == Rol.ADMIN);
+            imprimirEncabezado("GESTIÓN DE PAGOS — " + (esAdmin ? "ADMINISTRADOR" : "OPERARIO"));
+            System.out.println("  1. Realizar nuevo pago");
+            System.out.println("  2. Consultar historial de pagos");
+            System.out.println("  3. Consultar pagos pendientes");
+            System.out.println("  4. Generar / Ver comprobante de pago");
+            if (esAdmin) {
+                System.out.println("  5. Actualizar pago (modificar datos autorizados)");
+                System.out.println("  6. Eliminar pago");
+                System.out.println("  7. Gestión de métodos de pago");
+            }
+            System.out.println("  0. Volver");
+            System.out.println(LINEA_SIMPLE);
+
+            int op = leerEnteroConPrompt("  Seleccione una opción: ");
+            switch (op) {
+                case 1: flujoRealizarPago();             break;
+                case 2: flujoConsultarHistorialPagos();  break;
+                case 3: flujoConsultarPagosPendientes(); break;
+                case 4: flujoGenerarComprobante();       break;
+                case 5:
+                    if (esAdmin) flujoActualizarPago();
+                    else { System.out.println("\n  [!] Opción no válida."); pausar(); }
+                    break;
+                case 6:
+                    if (esAdmin) flujoEliminarPago();
+                    else { System.out.println("\n  [!] Opción no válida."); pausar(); }
+                    break;
+                case 7:
+                    if (esAdmin) menuGestionMetodosPagoLoop();
+                    else { System.out.println("\n  [!] Opción no válida."); pausar(); }
+                    break;
+                case 0: activo = false; break;
+                default: System.out.println("\n  [!] Opción no válida."); pausar();
+            }
+        }
+    }
+
+
+    private void flujoRealizarPago() {
+        flujoRealizarPagoConPlaca("");
+    }
+
+    private void flujoRealizarPagoConPlaca(String placaInicial) {
+        imprimirEncabezado("REALIZAR PAGO DE SERVICIO DE PARQUEADERO");
+
+        String placa = placaInicial;
+        if (placa == null || placa.isBlank()) {
+            placa = leerTextoConPrompt("  Placa del vehículo a pagar: ").toUpperCase().trim();
+        }
+
+        if (placa.isEmpty()) {
+            System.out.println("\n  [!] Debe ingresar una placa.");
+            pausar();
+            return;
+        }
+
+        Optional<Cliente> optCliente = servicio.buscarClientePorPlaca(placa);
+        if (optCliente.isEmpty()) {
+            System.out.println("\n  [!] No se encontró ningún cliente registrado con la placa: " + placa);
+            System.out.println("      Registre primero al cliente en el menú de mensualidades.");
+            pausar();
+            return;
+        }
+
+        Cliente cliente = optCliente.get();
+        System.out.println();
+        System.out.println("  Información del Cliente y Vehículo:");
+        System.out.println("  • Propietario      : " + cliente.getNombrePropietario());
+        System.out.println("  • Documento        : " + (cliente.getDocumento().isEmpty() ? "N/A" : cliente.getDocumento()));
+        System.out.println("  • Celda Asignada   : N° " + cliente.getNumeroCelda());
+        System.out.println("  • Vencimiento Actual: " + cliente.getFechaVencimiento().format(Cliente.FMT_DISPLAY));
+        System.out.println("  • Estado           : " + (cliente.isVigente() ? "AL DÍA (VIGENTE)" : "VENCIDO / PENDIENTE"));
+        System.out.println(LINEA_SIMPLE);
+
+        // Control de pagos duplicados
+        boolean permitirAdelantado = false;
+        Optional<Pago> dupOpt = servicio.buscarPagoDuplicado(placa);
+        if (dupOpt.isPresent()) {
+            Pago pExistente = dupOpt.get();
+            System.out.println("\n  [!] ADVERTENCIA — PAGO EXISTENTE IDENTIFICADO (EVITAR DUPLICADOS):");
+            System.out.println("      El vehículo ya cuenta con un pago activo para este servicio.");
+            System.out.println("      N° Transacción : " + pExistente.getIdTransaccion());
+            System.out.println("      Fecha de pago  : " + pExistente.getFechaPago().format(Pago.FMT_DISPLAY));
+            System.out.println("      Valor pagado   : " + pExistente.getValorFormateado());
+            System.out.println("      Vigente hasta  : " + cliente.getFechaVencimiento().format(Cliente.FMT_DISPLAY));
+            System.out.println();
+            String confAdelanto = leerTextoConPrompt("  ¿Desea registrar el pago de un mes ADICIONAL por adelantado? (S/N): ").toUpperCase().trim();
+            if (!"S".equals(confAdelanto)) {
+                System.out.println("\n  ✔  Operación cancelada. Se evitó duplicar el cobro.");
+                pausar();
+                return;
+            }
+            permitirAdelantado = true;
+        }
+
+        int meses = 1;
+        System.out.print("\n  Cantidad de meses a pagar [presione ENTER para 1]: ");
+        String mStr = scanner.hasNextLine() ? scanner.nextLine().trim() : "";
+        if (!mStr.isEmpty()) {
+            try {
+                meses = Integer.parseInt(mStr);
+                if (meses <= 0) meses = 1;
+            } catch (NumberFormatException e) {
+                meses = 1;
+            }
+        }
+
+        double valorCalculado = servicio.calcularValorServicio(placa, meses);
+        System.out.printf("  ✔  Valor calculado del servicio: $ %,.0f COP (%d mes(es) x $ %,.0f)%n",
+                valorCalculado, meses, ParqueaderoService.TARIFA_MENSUAL_BASE);
+        System.out.println(LINEA_SIMPLE);
+
+        System.out.printf("  Ingrese el valor a pagar [ENTER para aceptar $ %,.0f]: ", valorCalculado);
+        String vStr = scanner.hasNextLine() ? scanner.nextLine().trim() : "";
+        double valorIngresado = valorCalculado;
+        if (!vStr.isEmpty()) {
+            try {
+                vStr = vStr.replace("$", "").replace(".", "").replace(",", ".").trim();
+                valorIngresado = Double.parseDouble(vStr);
+            } catch (NumberFormatException e) {
+                valorIngresado = -1.0;
+            }
+        }
+
+        String errorValor = servicio.validarValorPago(valorIngresado, valorCalculado);
+        if (errorValor != null) {
+            System.out.println("\n  [!] ERROR DE VALIDACIÓN DE VALOR:");
+            System.out.println("      " + errorValor);
+            System.out.println("      El sistema rechaza el valor inválido y no realiza la transacción.");
+            pausar();
+            return;
+        }
+
+        System.out.println("\n  MÉTODOS DE PAGO DISPONIBLES:");
+        List<MetodoPago> metodos = servicio.listarMetodosPago();
+        for (MetodoPago mp : metodos) {
+            System.out.printf("   [%-4s] %-32s (%s)%n",
+                    mp.getId(), mp.getNombre(), mp.isHabilitado() ? "HABILITADO" : "DESHABILITADO");
+        }
+        System.out.println(LINEA_SIMPLE);
+
+        String idMetodo = leerTextoConPrompt("  Seleccione el código del método de pago (ej. MP-1): ").trim().toUpperCase();
+
+        String errorMetodo = servicio.validarMetodoPago(idMetodo);
+        if (errorMetodo != null) {
+            System.out.println("\n  [!] ERROR DE VALIDACIÓN DE MÉTODO DE PAGO:");
+            System.out.println("      " + errorMetodo);
+            System.out.println("      El sistema impide continuar con el pago e informa que no está disponible.");
+            pausar();
+            return;
+        }
+
+        String obs = leerTextoConPrompt("  Observaciones (opcional): ").trim();
+
+        System.out.println();
+        String conf = leerTextoConPrompt(String.format("  ¿Confirma registrar el pago por $ %,.0f? (S/N): ", valorIngresado))
+                .toUpperCase().trim();
+        if (!"S".equals(conf)) {
+            System.out.println("\n  Operación cancelada por el usuario.");
+            pausar();
+            return;
+        }
+
+        ResultadoPago resultado = servicio.registrarPago(
+                placa, valorIngresado, idMetodo,
+                usuarioActual.getNombre(), obs, meses, permitirAdelantado);
+
+        System.out.println();
+        System.out.println(LINEA_SIMPLE);
+        if (resultado.isExito()) {
+            System.out.println("  ✔  " + resultado.getMensaje());
+            System.out.println();
+            // Generar comprobante
+            System.out.println(resultado.getPago().generarComprobante());
+        } else {
+            System.out.println("  [!] " + resultado.getMensaje());
+        }
+        pausar();
+    }
+
+    private void flujoConsultarHistorialPagos() {
+        if (usuarioActual.getRol() == Rol.CLIENTE) {
+            flujoConsultarHistorialClienteAutenticado();
+            return;
+        }
+
+        imprimirEncabezado("CONSULTAR HISTORIAL DE PAGOS");
+        System.out.println("  1. Ver todos los pagos del parqueadero (Historial global)");
+        System.out.println("  2. Consultar historial de un cliente o vehículo específico");
+        System.out.println("  3. Buscar pago por N° de transacción");
+        System.out.println("  0. Volver");
+        System.out.println(LINEA_SIMPLE);
+
+        int op = leerEnteroConPrompt("  Seleccione: ");
+        switch (op) {
+            case 1:
+                mostrarTablaPagos(servicio.listarPagos(), "HISTORIAL COMPLETO DE PAGOS");
+                break;
+            case 2:
+                String cr = leerTextoConPrompt("  Ingrese placa o documento del cliente: ").trim();
+                if (cr.isEmpty()) {
+                    System.out.println("  [!] Debe ingresar un criterio de búsqueda.");
+                    pausar();
+                    return;
+                }
+                List<Pago> lista = servicio.listarPagosPorCliente(cr);
+                if (lista.isEmpty()) {
+                    System.out.println("\n  [i] No se encontraron pagos registrados para: " + cr);
+                    pausar();
+                } else {
+                    mostrarTablaPagos(lista, "HISTORIAL DE PAGOS — " + cr.toUpperCase());
+                }
+                break;
+            case 3:
+                String idTrans = leerTextoConPrompt("  Ingrese N° de Transacción (ej. PAG-0001): ").trim();
+                Optional<Pago> opt = servicio.buscarPagoPorId(idTrans);
+                if (opt.isPresent()) {
+                    System.out.println();
+                    System.out.println(opt.get().generarComprobante());
+                    pausar();
+                } else {
+                    System.out.println("\n  [!] No se encontró ningún pago con la transacción: " + idTrans);
+                    pausar();
+                }
+                break;
+            case 0:
+                break;
+            default:
+                System.out.println("  [!] Opción no válida.");
+                pausar();
+        }
+    }
+
+    private void flujoConsultarHistorialClienteAutenticado() {
+        imprimirEncabezado("MI HISTORIAL DE PAGOS");
+        List<Pago> misPagos = servicio.listarPagosPorCliente(usuarioActual.getDocumento());
+        if (misPagos.isEmpty()) {
+            misPagos = servicio.listarPagosPorCliente(usuarioActual.getNombre());
+        }
+
+        if (misPagos.isEmpty()) {
+            System.out.println("  [i] El usuario no tiene pagos registrados.");
+            pausar();
+            return;
+        }
+
+        mostrarTablaPagos(misPagos, "MIS PAGOS REALIZADOS");
+    }
+
+    private void flujoConsultarPagosPendientesCliente() {
+        imprimirEncabezado("MIS PAGOS PENDIENTES");
+        List<PagoPendiente> todos = servicio.consultarPagosPendientes();
+        List<PagoPendiente> mios = new ArrayList<>();
+        for (PagoPendiente p : todos) {
+            if (p.getNombreCliente().equalsIgnoreCase(usuarioActual.getNombre())) {
+                mios.add(p);
+            }
+        }
+
+        if (mios.isEmpty()) {
+            System.out.println("  ✔  ¡Se encuentra al día! No tiene pagos pendientes.");
+            pausar();
+            return;
+        }
+
+        mostrarTablaPagosPendientes(mios);
+    }
+
+    private void flujoConsultarPagosPendientes() {
+        imprimirEncabezado("CONSULTAR PAGOS PENDIENTES");
+
+        List<PagoPendiente> pendientes = servicio.consultarPagosPendientes();
+        if (pendientes.isEmpty()) {
+            System.out.println("  ✔  No hay mensualidades pendientes. Todos los clientes están al día.");
+            pausar();
+            return;
+        }
+
+        mostrarTablaPagosPendientes(pendientes);
+
+        System.out.println();
+        String placa = leerTextoConPrompt("  ¿Desea realizar el pago de alguna de estas placas? (Ingrese la placa o ENTER para volver): ")
+                .toUpperCase().trim();
+        if (!placa.isEmpty()) {
+            flujoRealizarPagoConPlaca(placa);
+        }
+    }
+
+    private void mostrarTablaPagosPendientes(List<PagoPendiente> lista) {
+        System.out.println();
+        System.out.printf("  %-8s │ %-20s │ %-9s │ %-12s │ %-10s │ %-14s │ %-15s%n",
+                "PLACA", "CLIENTE", "CELDA", "VENCE", "RETRASO", "VALOR PEND.", "ESTADO");
+        System.out.println("  " + "─".repeat(98));
+
+        double total = 0;
+        for (PagoPendiente p : lista) {
+            System.out.println(p.toString());
+            total += p.getValorPendiente();
+        }
+        System.out.println("  " + "─".repeat(98));
+        System.out.printf("  Total clientes pendientes: %d  |  Total cartera por cobrar: $ %,.0f COP%n",
+                lista.size(), total);
+        pausar();
+    }
+
+
+    private void flujoGenerarComprobante() {
+        imprimirEncabezado("GENERAR COMPROBANTE DE PAGO");
+
+        String idTrans = leerTextoConPrompt("  Ingrese el N° de Transacción (ej. PAG-0001): ").trim().toUpperCase();
+        if (idTrans.isEmpty()) {
+            System.out.println("  [!] Debe ingresar un número de transacción.");
+            pausar();
+            return;
+        }
+
+        Optional<String> compOpt = servicio.generarComprobantePago(idTrans);
+        if (compOpt.isPresent()) {
+            System.out.println();
+            System.out.println(compOpt.get());
+        } else {
+            System.out.println("\n  [!] No se encontró ningún pago con la transacción: " + idTrans);
+        }
+        pausar();
+    }
+
+
+    private void flujoActualizarPago() {
+        imprimirEncabezado("ACTUALIZAR PAGO (DATOS AUTORIZADOS)");
+
+        String idTrans = leerTextoConPrompt("  N° de Transacción del pago a actualizar: ").trim().toUpperCase();
+        if (idTrans.isEmpty()) {
+            System.out.println("  [!] Debe ingresar el N° de transacción.");
+            pausar();
+            return;
+        }
+
+        Optional<Pago> opt = servicio.buscarPagoPorId(idTrans);
+        if (opt.isEmpty()) {
+            System.out.println("\n  [!] No se encontró pago con N°: " + idTrans);
+            pausar();
+            return;
+        }
+
+        Pago p = opt.get();
+        System.out.println("\n  Datos actuales del pago:");
+        System.out.println("  • N° Transacción : " + p.getIdTransaccion());
+        System.out.println("  • Placa          : " + p.getPlacaVehiculo());
+        System.out.println("  • Cliente        : " + p.getNombreCliente());
+        System.out.println("  • Fecha          : " + p.getFechaPago().format(Pago.FMT_DISPLAY));
+        System.out.println("  • Valor          : " + p.getValorFormateado());
+        System.out.println("  • Método actual  : " + p.getMetodoPagoNombre() + " (" + p.getMetodoPagoId() + ")");
+        System.out.println("  • Estado actual  : " + p.getEstado());
+        System.out.println("  • Observaciones  : " + p.getObservaciones());
+        System.out.println(LINEA_SIMPLE);
+        System.out.println("  (Presione ENTER en cualquier campo para conservar el valor actual)");
+
+        System.out.println("\n  Métodos de pago disponibles:");
+        for (MetodoPago mp : servicio.listarMetodosPagoHabilitados()) {
+            System.out.printf("   [%s] %s%n", mp.getId(), mp.getNombre());
+        }
+        String nuevoMetodo = leerTextoConPrompt("  Nuevo método de pago (ID, ej. MP-1): ").trim().toUpperCase();
+
+        System.out.println("  Estados válidos: APROBADO, PENDIENTE, ANULADO");
+        String nuevoEstado = leerTextoConPrompt("  Nuevo estado [" + p.getEstado() + "]: ").trim().toUpperCase();
+
+        String nuevasObs = leerTextoConPrompt("  Nuevas observaciones: ").trim();
+
+        if (nuevoMetodo.isEmpty() && nuevoEstado.isEmpty() && nuevasObs.isEmpty()) {
+            System.out.println("\n  No se ingresaron cambios. Operación cancelada.");
+            pausar();
+            return;
+        }
+
+        boolean ok = servicio.actualizarPago(
+                idTrans,
+                nuevoMetodo.isEmpty() ? null : nuevoMetodo,
+                nuevoEstado.isEmpty() ? null : nuevoEstado,
+                nuevasObs.isEmpty() ? null : nuevasObs);
+
+        System.out.println();
+        System.out.println(LINEA_SIMPLE);
+        if (ok) {
+            System.out.println("  ✔  Pago actualizado correctamente en el sistema.");
+            servicio.buscarPagoPorId(idTrans).ifPresent(act -> {
+                System.out.println("     Nuevo método : " + act.getMetodoPagoNombre());
+                System.out.println("     Nuevo estado : " + act.getEstado());
+                System.out.println("     Observaciones: " + act.getObservaciones());
+            });
+        } else {
+            System.out.println("  [!] No se pudo actualizar el pago. Verifique que los datos sean válidos y el método esté habilitado.");
+        }
+        pausar();
+    }
+
+    private void flujoEliminarPago() {
+        imprimirEncabezado("ELIMINAR PAGO DEL SISTEMA");
+
+        String idTrans = leerTextoConPrompt("  N° de Transacción del pago a eliminar: ").trim().toUpperCase();
+        if (idTrans.isEmpty()) {
+            System.out.println("  [!] Debe ingresar el N° de transacción.");
+            pausar();
+            return;
+        }
+
+        Optional<Pago> opt = servicio.buscarPagoPorId(idTrans);
+        if (opt.isEmpty()) {
+            System.out.println("\n  [!] No se encontró ningún pago con la transacción: " + idTrans);
+            pausar();
+            return;
+        }
+
+        Pago p = opt.get();
+        System.out.println("\n  Pago a eliminar:");
+        System.out.printf("  Transacción : %s  |  Placa: %s  |  Valor: %s  |  Fecha: %s%n",
+                p.getIdTransaccion(), p.getPlacaVehiculo(), p.getValorFormateado(),
+                p.getFechaPago().format(Pago.FMT_DISPLAY));
+
+        String conf = leerTextoConPrompt("\n  ¿Está SEGURO de eliminar este pago? (S/N): ").toUpperCase().trim();
+        if (!"S".equals(conf)) {
+            System.out.println("  Operación cancelada.");
+            pausar();
+            return;
+        }
+
+        boolean ok = servicio.eliminarPago(idTrans);
+        System.out.println();
+        System.out.println(LINEA_SIMPLE);
+        if (ok) {
+            System.out.println("  ✔  Pago " + idTrans + " eliminado exitosamente del sistema.");
+        } else {
+            System.out.println("  [!] No se pudo eliminar el pago.");
+        }
+        pausar();
+    }
+
+
+    private void menuGestionMetodosPagoLoop() {
+        boolean activo = true;
+        while (activo) {
+            imprimirEncabezado("GESTIÓN DE MÉTODOS DE PAGO — ADMINISTRADOR");
+            mostrarTablaMetodosPago();
+
+            System.out.println("  1. Agregar nuevo método de pago");
+            System.out.println("  2. Habilitar método de pago");
+            System.out.println("  3. Deshabilitar método de pago");
+            System.out.println("  0. Volver a Gestión de Pagos");
+            System.out.println(LINEA_SIMPLE);
+
+            switch (leerEnteroConPrompt("  Seleccione: ")) {
+                case 1: flujoAgregarMetodoPago();           break;
+                case 2: flujoCambiarEstadoMetodoPago(true);  break;
+                case 3: flujoCambiarEstadoMetodoPago(false); break;
+                case 0: activo = false; break;
+                default: System.out.println("\n  [!] Opción no válida."); pausar();
+            }
+        }
+    }
+
+    private void mostrarTablaMetodosPago() {
+        List<MetodoPago> lista = servicio.listarMetodosPago();
+        System.out.println();
+        System.out.printf("  %-6s │  %-28s │  %-14s │  %s%n",
+                "CÓDIGO", "MÉTODO DE PAGO", "ESTADO", "DESCRIPCIÓN");
+        System.out.println("  " + "─".repeat(84));
+        for (MetodoPago mp : lista) {
+            System.out.println(mp.toString());
+        }
+        System.out.println("  " + "─".repeat(84));
+        System.out.println();
+    }
+
+    private void flujoAgregarMetodoPago() {
+        imprimirEncabezado("AGREGAR NUEVO MÉTODO DE PAGO");
+
+        String nombre = leerTextoConPrompt("  Nombre del método de pago: ").trim();
+        String desc   = leerTextoConPrompt("  Descripción               : ").trim();
+
+        if (nombre.isEmpty()) {
+            System.out.println("\n  [!] El nombre del método de pago es obligatorio.");
+            pausar();
+            return;
+        }
+
+        boolean ok = servicio.agregarMetodoPago(nombre, desc, true);
+        System.out.println();
+        System.out.println(LINEA_SIMPLE);
+        if (ok) {
+            System.out.println("  ✔  Método de pago agregado exitosamente.");
+        } else {
+            System.out.println("  [!] Ya existe un método de pago con ese nombre.");
+        }
+        pausar();
+    }
+
+
+    private void flujoCambiarEstadoMetodoPago(boolean habilitar) {
+        String accion = habilitar ? "HABILITAR" : "DESHABILITAR";
+        imprimirEncabezado(accion + " MÉTODO DE PAGO");
+
+        String id = leerTextoConPrompt("  Código del método (ej. MP-1): ").trim().toUpperCase();
+        if (id.isEmpty()) {
+            System.out.println("  [!] Debe ingresar el código del método.");
+            pausar();
+            return;
+        }
+
+        Optional<MetodoPago> opt = servicio.buscarMetodoPagoPorId(id);
+        if (opt.isEmpty()) {
+            System.out.println("\n  [!] No se encontró ningún método de pago con código: " + id);
+            pausar();
+            return;
+        }
+
+        MetodoPago mp = opt.get();
+        boolean ok = servicio.cambiarEstadoMetodoPago(id, habilitar);
+        System.out.println();
+        System.out.println(LINEA_SIMPLE);
+        if (ok) {
+            System.out.printf("  ✔  Método de pago [%s - %s] ha sido %s exitosamente.%n",
+                    mp.getId(), mp.getNombre(), (habilitar ? "HABILITADO" : "DESHABILITADO"));
+            if (!habilitar) {
+                System.out.println("      A partir de ahora no podrá ser seleccionado para realizar pagos.");
+            }
+        } else {
+            System.out.println("  [!] No se pudo cambiar el estado del método de pago.");
+        }
+        pausar();
+    }
+
+    private void mostrarTablaPagos(List<Pago> lista, String titulo) {
+        imprimirEncabezado(titulo);
+        if (lista.isEmpty()) {
+            System.out.println("  No hay pagos registrados.");
+            pausar();
+            return;
+        }
+
+        System.out.println();
+        System.out.printf("  %-10s │ %-16s │ %-8s │ %-15s │ %-18s │ %-10s%n",
+                "N° TRANS.", "FECHA Y HORA", "PLACA", "VALOR", "MÉTODO DE PAGO", "ESTADO");
+        System.out.println("  " + "─".repeat(88));
+
+        double total = 0;
+        for (Pago p : lista) {
+            System.out.println(p.toString());
+            if ("APROBADO".equalsIgnoreCase(p.getEstado())) {
+                total += p.getValor();
+            }
+        }
+        System.out.println("  " + "─".repeat(88));
+        System.out.printf("  Total transacciones: %d  |  Total recaudado aprobado: $ %,.0f COP%n",
+                lista.size(), total);
+        pausar();
+    }
+
+
+
     private void flujoRegistrarUsuario() {
         imprimirEncabezado("REGISTRAR USUARIO DEL SISTEMA");
         System.out.println("  Todos los campos son obligatorios.");
@@ -238,9 +836,9 @@ public class Menu {
         String correo     = leerTextoConPrompt("  Correo       : ").trim();
         String contrasena = leerTextoConPrompt("  Contraseña   : ").trim();
         String telefono   = leerTextoConPrompt("  Teléfono     : ").trim();
-        System.out.println("  Rol: 1) ADMIN   2) OPERARIO");
+        System.out.println("  Rol: 1) ADMIN   2) OPERARIO   3) CLIENTE");
         int    rolOp      = leerEnteroConPrompt("  Rol           : ");
-        Rol    rol        = rolOp == 1 ? Rol.ADMIN : rolOp == 2 ? Rol.OPERARIO : null;
+        Rol    rol        = rolOp == 1 ? Rol.ADMIN : rolOp == 2 ? Rol.OPERARIO : rolOp == 3 ? Rol.CLIENTE : null;
 
         List<String> faltantes = new ArrayList<>();
         if (documento.isEmpty())  faltantes.add("Documento");
@@ -248,7 +846,7 @@ public class Menu {
         if (correo.isEmpty())     faltantes.add("Correo");
         if (contrasena.isEmpty()) faltantes.add("Contraseña");
         if (telefono.isEmpty())   faltantes.add("Teléfono");
-        if (rol == null)          faltantes.add("Rol (selección inválida, elija 1 o 2)");
+        if (rol == null)          faltantes.add("Rol (selección inválida, elija 1, 2 o 3)");
 
         if (!faltantes.isEmpty()) {
             System.out.println("\n  [!] Los siguientes campos son requeridos:");
@@ -273,7 +871,6 @@ public class Menu {
         pausar();
     }
 
-    /** Muestra información de todos los usuarios registrados. */
     private void flujoConsultarUsuarios() {
         imprimirEncabezado("LISTA DE USUARIOS DEL SISTEMA");
 
@@ -304,7 +901,6 @@ public class Menu {
         pausar();
     }
 
-    /** Permite modificar el teléfono o correo de un usuario. */
     private void flujoActualizarUsuario() {
         imprimirEncabezado("ACTUALIZAR USUARIO");
 
@@ -348,7 +944,6 @@ public class Menu {
         pausar();
     }
 
-    /** Desactiva un usuario activo para revocar su acceso al sistema. */
     private void flujoDesactivarUsuario() {
         imprimirEncabezado("DESACTIVAR USUARIO");
 
@@ -375,8 +970,9 @@ public class Menu {
             pausar();
             return;
         }
+
         if (u.getDocumento().equals(usuarioActual.getDocumento())) {
-            System.out.println("\n  [!] No puede desactivar su propia cuenta.");
+            System.out.println("\n  [!] No puede desactivar su propio usuario mientras tiene la sesión activa.");
             pausar();
             return;
         }
@@ -391,16 +987,12 @@ public class Menu {
         boolean ok = servicio.desactivarUsuario(documento);
         System.out.println();
         System.out.println(LINEA_SIMPLE);
-        if (ok) {
-            System.out.println("  ✔  Usuario '" + u.getNombre() + "' desactivado exitosamente.");
-            System.out.println("     Estado: INACTIVO — El usuario ya no podrá iniciar sesión.");
-        } else {
-            System.out.println("  [!] No se pudo desactivar el usuario.");
-        }
+        System.out.println(ok
+            ? "  ✔  Usuario desactivado correctamente. No podrá iniciar sesión."
+            : "  [!] No se pudo desactivar el usuario.");
         pausar();
     }
 
-    /** Asigna un nuevo rol (ADMIN / OPERARIO) a un usuario. */
     private void flujoAsignarRol() {
         imprimirEncabezado("ASIGNAR ROL A USUARIO");
 
@@ -420,12 +1012,19 @@ public class Menu {
 
         Usuario u = opt.get();
         System.out.println("\n  Usuario: " + u.getNombre() + "  |  Rol actual: " + u.getRol().name());
-        System.out.println("  1) ADMIN     2) OPERARIO");
-        int rolOp = leerEnteroConPrompt("  Seleccione nuevo rol: ");
-        Rol nuevoRol = rolOp == 1 ? Rol.ADMIN : rolOp == 2 ? Rol.OPERARIO : null;
+        System.out.println("  Seleccione el nuevo rol:");
+        System.out.println("  1) ADMIN   2) OPERARIO   3) CLIENTE");
+        int opcion = leerEnteroConPrompt("  Nuevo rol: ");
 
+        Rol nuevoRol = opcion == 1 ? Rol.ADMIN : opcion == 2 ? Rol.OPERARIO : opcion == 3 ? Rol.CLIENTE : null;
         if (nuevoRol == null) {
-            System.out.println("\n  [!] Selección inválida. Operación cancelada.");
+            System.out.println("\n  [!] Opción de rol inválida.");
+            pausar();
+            return;
+        }
+
+        if (nuevoRol == u.getRol()) {
+            System.out.println("\n  El usuario ya posee el rol: " + nuevoRol.name());
             pausar();
             return;
         }
@@ -433,29 +1032,24 @@ public class Menu {
         boolean ok = servicio.asignarRol(documento, nuevoRol);
         System.out.println();
         System.out.println(LINEA_SIMPLE);
-        if (ok) {
-            System.out.println("  ✔  Rol asignado: " + nuevoRol.name());
-            System.out.println("     Los permisos se aplicarán en el próximo inicio de sesión.");
-        } else {
-            System.out.println("  [!] No se pudo asignar el rol.");
-        }
+        System.out.println(ok
+            ? "  ✔  Rol actualizado a " + nuevoRol.name() + " para el usuario " + u.getNombre() + "."
+            : "  [!] No se pudo actualizar el rol.");
         pausar();
     }
 
-    /** Registra una nueva celda en el parqueadero con su código único. */
     private void flujoRegistrarCelda() {
-        imprimirEncabezado("REGISTRAR CELDA");
+        imprimirEncabezado("REGISTRAR NUEVA CELDA");
 
-        String codigo = leerTextoConPrompt("  Código de la celda: ").trim();
+        String codigo = leerTextoConPrompt("  Código de la celda (ej. A1, B2): ").trim().toUpperCase();
         if (codigo.isEmpty()) {
-            System.out.println("  [!] El código es obligatorio.");
+            System.out.println("  [!] Debe ingresar un código.");
             pausar();
             return;
         }
 
         if (servicio.buscarCeldaPorCodigo(codigo).isPresent()) {
-            System.out.println("\n  [!] El código '" + codigo
-                    + "' ya existe. No se permite registro duplicado.");
+            System.out.println("\n  [!] Ya existe una celda con el código: " + codigo);
             pausar();
             return;
         }
@@ -463,18 +1057,14 @@ public class Menu {
         boolean ok = servicio.registrarCelda(codigo);
         System.out.println();
         System.out.println(LINEA_SIMPLE);
-        if (ok) {
-            System.out.println("  ✔  Celda '" + codigo + "' registrada correctamente.");
-            System.out.println("     Estado: LIBRE  |  Habilitada: SÍ");
-        } else {
-            System.out.println("  [!] No se pudo registrar la celda.");
-        }
+        System.out.println(ok
+            ? "  ✔  Celda [" + codigo + "] registrada exitosamente."
+            : "  [!] No se pudo registrar la celda.");
         pausar();
     }
 
-    /** Consulta y muestra todas las celdas con sus estados actuales. */
     private void flujoConsultarCeldas() {
-        imprimirEncabezado("ESTADO DE CELDAS DEL PARQUEADERO");
+        imprimirEncabezado("LISTA DE CELDAS");
 
         List<Celda> celdas = servicio.listarCeldas();
         if (celdas.isEmpty()) {
@@ -483,36 +1073,27 @@ public class Menu {
             return;
         }
 
-        long libres         = celdas.stream().filter(c ->  c.isHabilitada() &&  c.isDisponible()).count();
-        long ocupadas       = celdas.stream().filter(c ->  c.isHabilitada() && !c.isDisponible()).count();
-        long deshabilitadas = celdas.stream().filter(c -> !c.isHabilitada()).count();
-
         System.out.println();
-        System.out.println("  ┌────────┬───────────────┬─────────────┐");
-        System.out.println("  │ CÓDIGO │    ESTADO     │    PLACA    │");
-        System.out.println("  ├────────┼───────────────┼─────────────┤");
+        System.out.println("  CÓDIGO │  ESTADO        │  VEHÍCULO");
+        System.out.println("  " + "─".repeat(38));
         for (Celda c : celdas) {
-            String estado;
-            if (!c.isHabilitada())    estado = "DESHABILITADA";
-            else if (c.isDisponible()) estado = "LIBRE        ";
-            else                       estado = "OCUPADA      ";
-            String placa = (!c.isDisponible() && c.getPlacaVehiculo() != null
-                            && !c.getPlacaVehiculo().isEmpty())
-                           ? c.getPlacaVehiculo() : "    ---    ";
-            System.out.printf("  │ %-6s │ %-13s │ %-11s │%n",
-                c.getCodigo(), estado, placa);
+            System.out.println(c.toString());
         }
-        System.out.println("  └────────┴───────────────┴─────────────┘");
-        System.out.printf("%n  Libres: %d  |  Ocupadas: %d  |  Deshabilitadas: %d  |  Total: %d%n",
-            libres, ocupadas, deshabilitadas, celdas.size());
+        System.out.println("  " + "─".repeat(38));
+
+        long libres       = celdas.stream().filter(c -> c.isHabilitada() && c.isDisponible()).count();
+        long ocupadas     = celdas.stream().filter(c -> c.isHabilitada() && !c.isDisponible()).count();
+        long deshab       = celdas.stream().filter(c -> !c.isHabilitada()).count();
+
+        System.out.printf("  Total: %d  │  Libres: %d  │  Ocupadas: %d  │  Deshabilitadas: %d%n",
+                celdas.size(), libres, ocupadas, deshab);
         pausar();
     }
 
-    /** Permite modificar el código o estado de una celda. */
     private void flujoActualizarCelda() {
         imprimirEncabezado("ACTUALIZAR CELDA");
 
-        String codigo = leerTextoConPrompt("  Código actual de la celda: ").trim();
+        String codigo = leerTextoConPrompt("  Código actual de la celda: ").toUpperCase().trim();
         if (codigo.isEmpty()) {
             System.out.println("  [!] Debe ingresar un código.");
             pausar();
@@ -527,44 +1108,35 @@ public class Menu {
         }
 
         Celda c = opt.get();
-        System.out.println("\n  Celda encontrada:");
-        System.out.println("     Código     : " + c.getCodigo());
-        System.out.println("     Habilitada : " + (c.isHabilitada() ? "Sí" : "No"));
-        System.out.println("     Disponible : " + (c.isDisponible() ? "Sí" : "No"));
-        System.out.println("\n  Deje en blanco para conservar el valor actual.");
+        System.out.println("\n  Celda encontrada: " + c.getCodigo()
+                + "  [" + (c.isHabilitada() ? "HABILITADA" : "DESHABILITADA") + "]");
+        System.out.println("  Deje en blanco para conservar el valor actual.");
 
-        String nuevoCodigo = leerTextoConPrompt("  Nuevo código       [" + c.getCodigo() + "]: ").trim();
-        System.out.println("  Cambiar estado habilitada:  1) Habilitar   2) Deshabilitar   0) Sin cambio");
-        int     estOp      = leerEnteroConPrompt("  Seleccione: ");
-        Boolean nuevoEst   = estOp == 1 ? Boolean.TRUE : estOp == 2 ? Boolean.FALSE : null;
+        String nuevoCodigo = leerTextoConPrompt("  Nuevo código: ").trim().toUpperCase();
 
-        if (nuevoCodigo.isEmpty() && nuevoEst == null) {
+        System.out.println("  Estado: 1) Habilitada   2) Deshabilitada   [ENTER para conservar]");
+        String estadoStr = leerTextoConPrompt("  Opción: ").trim();
+        Boolean nuevoEstado = null;
+        if ("1".equals(estadoStr)) nuevoEstado = true;
+        else if ("2".equals(estadoStr)) nuevoEstado = false;
+
+        if (nuevoCodigo.isEmpty() && nuevoEstado == null) {
             System.out.println("\n  No se realizaron cambios.");
             pausar();
             return;
         }
 
-        // Proteger celda ocupada de ser deshabilitada
-        if (Boolean.FALSE.equals(nuevoEst) && !c.isDisponible()) {
-            System.out.println("\n  [!] No se puede deshabilitar: la celda tiene una asignación activa.");
-            System.out.println("      Placa asignada: " + c.getPlacaVehiculo());
-            pausar();
-            return;
-        }
-
         boolean ok = servicio.actualizarCelda(codigo,
-            nuevoCodigo.isEmpty() ? null : nuevoCodigo,
-            nuevoEst);
+            nuevoCodigo.isEmpty() ? null : nuevoCodigo, nuevoEstado);
 
         System.out.println();
         System.out.println(LINEA_SIMPLE);
         System.out.println(ok
-            ? "  ✔  Celda actualizada correctamente."
-            : "  [!] No se pudo actualizar. El nuevo código puede estar duplicado.");
+            ? "   Celda actualizada correctamente."
+            : "  No se pudo actualizar la celda (el nuevo código puede estar en uso).");
         pausar();
     }
 
-    /** Muestra únicamente las celdas libres y habilitadas. */
     private void flujoCeldasDisponibles() {
         imprimirEncabezado("CELDAS DISPONIBLES");
 
@@ -576,58 +1148,49 @@ public class Menu {
         }
 
         System.out.println();
-        System.out.println("  Celdas habilitadas y libres:");
-        System.out.println();
-        System.out.println("  ┌────────┬───────────┐");
-        System.out.println("  │ CÓDIGO │   ESTADO  │");
-        System.out.println("  ├────────┼───────────┤");
+        System.out.println("  CÓDIGO │  ESTADO        │  VEHÍCULO");
+        System.out.println("  " + "─".repeat(38));
         for (Celda c : disponibles) {
-            System.out.printf("  │ %-6s │   LIBRE   │%n", c.getCodigo());
+            System.out.println(c.toString());
         }
-        System.out.println("  └────────┴───────────┘");
-        System.out.println("\n  Total disponibles: " + disponibles.size());
+        System.out.println("  " + "─".repeat(38));
+        System.out.println("  Total disponibles: " + disponibles.size());
         pausar();
     }
 
-    /** Deshabilita una celda asegurando que no tenga una asignación activa. */
     private void flujoDeshabilitarCelda() {
         imprimirEncabezado("DESHABILITAR CELDA");
 
-        String codigo = leerTextoConPrompt("  Código de la celda a deshabilitar: ").trim();
+        String codigo = leerTextoConPrompt("  Código de la celda a deshabilitar: ").toUpperCase().trim();
         if (codigo.isEmpty()) {
-            System.out.println("  [!] Debe ingresar un código.");
+            System.out.println("   Debe ingresar un código.");
             pausar();
             return;
         }
 
         Optional<Celda> opt = servicio.buscarCeldaPorCodigo(codigo);
         if (opt.isEmpty()) {
-            System.out.println("\n  [!] No se encontró celda con código: " + codigo);
+            System.out.println("\n  No se encontró celda con código: " + codigo);
             pausar();
             return;
         }
 
         Celda c = opt.get();
-        System.out.println("\n  Celda: " + c.getCodigo()
-                + "  |  " + (c.isHabilitada() ? "Habilitada" : "Ya deshabilitada")
-                + "  |  " + (c.isDisponible() ? "LIBRE" : "OCUPADA — Placa: " + c.getPlacaVehiculo()));
-
         if (!c.isHabilitada()) {
-            System.out.println("\n  [!] La celda ya está deshabilitada.");
+            System.out.println("\n   La celda ya se encuentra DESHABILITADA.");
             pausar();
             return;
         }
 
         if (!c.isDisponible()) {
-            System.out.println("\n  [!] OPERACIÓN IMPEDIDA: La celda tiene una asignación activa.");
-            System.out.println("      Placa asignada: " + c.getPlacaVehiculo());
-            System.out.println("      Debe liberar la celda antes de deshabilitarla.");
+            System.out.println("\n   No se puede deshabilitar la celda: tiene un vehículo asignado ("
+                    + c.getPlacaVehiculo() + ").");
+            System.out.println("      Libere la celda antes de deshabilitarla.");
             pausar();
             return;
         }
 
-        String conf = leerTextoConPrompt("\n  ¿Confirma deshabilitar la celda '" + codigo + "'? (S/N): ")
-                .toUpperCase().trim();
+        String conf = leerTextoConPrompt("\n  ¿Confirma deshabilitar la celda " + codigo + "? (S/N): ").toUpperCase().trim();
         if (!"S".equals(conf)) {
             System.out.println("  Operación cancelada.");
             pausar();
@@ -638,52 +1201,40 @@ public class Menu {
         System.out.println();
         System.out.println(LINEA_SIMPLE);
         System.out.println(ok
-            ? "  ✔  Celda '" + codigo + "' deshabilitada exitosamente."
-            : "  [!] No se pudo deshabilitar la celda.");
+            ? "    Celda [" + codigo + "] deshabilitada. No podrá recibir asignaciones."
+            : "   No se pudo deshabilitar la celda.");
         pausar();
     }
 
-    /** Asigna una celda disponible a un vehículo. */
     private void flujoAsignarCelda() {
         imprimirEncabezado("ASIGNAR CELDA A VEHÍCULO");
 
-        List<Celda> disponibles = servicio.listarCeldasDisponibles();
-        if (disponibles.isEmpty()) {
-            System.out.println("  [!] No hay celdas disponibles en este momento.");
+        if (!servicio.hayCeldasDisponibles()) {
+            System.out.println("  No hay celdas disponibles para asignar.");
             pausar();
             return;
         }
 
-        System.out.println("  Celdas disponibles:");
-        disponibles.forEach(c -> System.out.println("    • " + c.getCodigo()));
+        String placa = leerTextoConPrompt("  Placa del vehículo: ").toUpperCase().trim();
+        if (placa.isEmpty()) {
+            System.out.println("   Debe ingresar una placa.");
+            pausar();
+            return;
+        }
+
+        System.out.println("\n  Celdas disponibles:");
+        List<Celda> disponibles = servicio.listarCeldasDisponibles();
+        StringBuilder sb = new StringBuilder("  ");
+        for (int i = 0; i < disponibles.size(); i++) {
+            sb.append(disponibles.get(i).getCodigo());
+            if (i < disponibles.size() - 1) sb.append(", ");
+        }
+        System.out.println(sb);
         System.out.println();
 
-        String codigo = leerTextoConPrompt("  Código de la celda  : ").trim();
-        String placa  = leerTextoConPrompt("  Placa del vehículo  : ").toUpperCase().trim();
-
-        if (codigo.isEmpty() || placa.isEmpty()) {
-            System.out.println("\n  [!] Código y placa son obligatorios.");
-            pausar();
-            return;
-        }
-
-        Optional<Celda> opt = servicio.buscarCeldaPorCodigo(codigo);
-        if (opt.isEmpty()) {
-            System.out.println("\n  [!] No se encontró celda con código: " + codigo);
-            pausar();
-            return;
-        }
-
-        Celda c = opt.get();
-
-        if (!c.isDisponible()) {
-            System.out.println("\n  [!] ASIGNACIÓN IMPEDIDA: La celda '" + codigo + "' ya está ocupada.");
-            System.out.println("      Vehículo actual: " + c.getPlacaVehiculo());
-            pausar();
-            return;
-        }
-        if (!c.isHabilitada()) {
-            System.out.println("\n  [!] La celda '" + codigo + "' está deshabilitada.");
+        String codigo = leerTextoConPrompt("  Código de la celda a asignar: ").toUpperCase().trim();
+        if (codigo.isEmpty()) {
+            System.out.println("   Debe ingresar el código de la celda.");
             pausar();
             return;
         }
@@ -691,58 +1242,50 @@ public class Menu {
         boolean ok = servicio.asignarCelda(codigo, placa);
         System.out.println();
         System.out.println(LINEA_SIMPLE);
-        if (ok) {
-            System.out.println("  ✔  Celda '" + codigo + "' asignada al vehículo [" + placa + "].");
-            System.out.println("     Estado: OCUPADA");
-        } else {
-            System.out.println("  [!] No se pudo realizar la asignación.");
-        }
+        System.out.println(ok
+            ? "    Celda [" + codigo + "] asignada exitosamente al vehículo [" + placa + "]."
+            : "  No se pudo asignar la celda. Verifique que exista, esté habilitada y libre.");
         pausar();
     }
 
-    /** Libera una celda ocupada registrando la salida del vehículo. */
     private void flujoLiberarCelda() {
-        imprimirEncabezado("LIBERAR CELDA — REGISTRO DE SALIDA");
+        imprimirEncabezado("LIBERAR CELDA");
 
-        String codigo = leerTextoConPrompt("  Código de la celda a liberar: ").trim();
+        String codigo = leerTextoConPrompt("  Código de la celda a liberar: ").toUpperCase().trim();
         if (codigo.isEmpty()) {
-            System.out.println("  [!] Debe ingresar un código.");
+            System.out.println("   Debe ingresar un código.");
             pausar();
             return;
         }
 
         Optional<Celda> opt = servicio.buscarCeldaPorCodigo(codigo);
         if (opt.isEmpty()) {
-            System.out.println("\n  [!] No se encontró celda con código: " + codigo);
+            System.out.println("\n  No se encontró celda con código: " + codigo);
             pausar();
             return;
         }
 
         Celda c = opt.get();
         if (c.isDisponible()) {
-            System.out.println("\n  [!] La celda '" + codigo + "' ya se encuentra libre.");
+            System.out.println("\n  La celda [" + codigo + "] ya está libre.");
             pausar();
             return;
         }
 
-        System.out.println("\n  Celda: " + c.getCodigo() + "  |  Vehículo: " + c.getPlacaVehiculo());
-        String conf = leerTextoConPrompt("  ¿Confirmar salida del vehículo? (S/N): ").toUpperCase().trim();
+        System.out.println("\n  Celda [" + codigo + "] — Vehículo asignado: " + c.getPlacaVehiculo());
+        String conf = leerTextoConPrompt("  ¿Confirma la liberación? (S/N): ").toUpperCase().trim();
         if (!"S".equals(conf)) {
             System.out.println("  Operación cancelada.");
             pausar();
             return;
         }
 
-        String placaLiberada = c.getPlacaVehiculo();
         boolean ok = servicio.liberarCelda(codigo);
         System.out.println();
         System.out.println(LINEA_SIMPLE);
-        if (ok) {
-            System.out.println("  ✔  Vehículo [" + placaLiberada + "] registrado como salida.");
-            System.out.println("     Celda '" + codigo + "' ahora está DISPONIBLE.");
-        } else {
-            System.out.println("  [!] No se pudo liberar la celda.");
-        }
+        System.out.println(ok
+            ? "   Celda [" + codigo + "] liberada exitosamente."
+            : "  No se pudo liberar la celda.");
         pausar();
     }
 
@@ -750,39 +1293,46 @@ public class Menu {
         imprimirEncabezado("REGISTRAR NUEVO CLIENTE (MENSUALIDAD)");
 
         if (!servicio.hayCeldasDisponibles()) {
-            System.out.println("  [!] No hay celdas disponibles. El parqueadero está lleno.");
+            System.out.println("   No hay celdas disponibles. El parqueadero está lleno.");
             pausar();
             return;
         }
 
-        String placa    = leerTextoConPrompt("  Placa del vehículo    : ").toUpperCase().trim();
-        String nombre   = leerTextoConPrompt("  Nombre del propietario: ").trim();
-        String telefono = leerTextoConPrompt("  Teléfono de contacto  : ").trim();
+        String placa     = leerTextoConPrompt("  Placa del vehículo     : ").toUpperCase().trim();
+        String nombre    = leerTextoConPrompt("  Nombre del propietario : ").trim();
+        String documento = leerTextoConPrompt("  Documento de identidad : ").trim();
+        String telefono  = leerTextoConPrompt("  Teléfono de contacto   : ").trim();
 
         if (placa.isEmpty() || nombre.isEmpty()) {
-            System.out.println("\n  [!] La placa y el nombre son obligatorios.");
+            System.out.println("\n   La placa y el nombre son obligatorios.");
             pausar();
             return;
         }
 
         if (servicio.buscarClientePorPlaca(placa).isPresent()) {
-            System.out.println("\n  [!] La placa '" + placa + "' ya está registrada en el sistema.");
+            System.out.println("\n   La placa '" + placa + "' ya está registrada en el sistema.");
             pausar();
             return;
         }
 
-        boolean ok = servicio.registrarNuevoCliente(placa, nombre, telefono);
+        boolean ok = servicio.registrarNuevoCliente(placa, nombre, documento, telefono);
         System.out.println();
         System.out.println(LINEA_SIMPLE);
         if (ok) {
             Optional<Cliente> reg = servicio.buscarClientePorPlaca(placa);
-            System.out.println("  ✔  Cliente registrado exitosamente.");
-            reg.ifPresent(c ->
+            System.out.println("    Cliente registrado exitosamente.");
+            reg.ifPresent(c -> {
                 System.out.println("     Celda N°: " + c.getNumeroCelda()
-                    + "  |  Vencimiento: " + c.getFechaVencimiento().format(Cliente.FMT_DISPLAY))
-            );
+                    + "  |  Vencimiento: " + c.getFechaVencimiento().format(Cliente.FMT_DISPLAY));
+            });
+
+            String pagar = leerTextoConPrompt("\n  ¿Desea realizar el pago de la primera mensualidad ahora? (S/N): ").toUpperCase().trim();
+            if ("S".equals(pagar)) {
+                flujoRealizarPagoConPlaca(placa);
+                return;
+            }
         } else {
-            System.out.println("  [!] No se pudo registrar el cliente.");
+            System.out.println("   No se pudo registrar el cliente.");
         }
         pausar();
     }
@@ -792,37 +1342,38 @@ public class Menu {
 
         String placa = leerTextoConPrompt("  Placa del vehículo: ").toUpperCase().trim();
         if (placa.isEmpty()) {
-            System.out.println("  [!] Placa no puede estar vacía.");
+            System.out.println("   Placa no puede estar vacía.");
             pausar();
             return;
         }
 
         System.out.println();
-        System.out.println(LINEA_SIMPLE);
-
         Optional<Cliente> opt = servicio.buscarClientePorPlaca(placa);
         if (opt.isEmpty()) {
-            System.out.println("  ✘  Placa [" + placa + "] NO encontrada. El vehículo no está registrado.");
+            System.out.println("   VEHÍCULO NO REGISTRADO");
+            System.out.println("     La placa [" + placa + "] no cuenta con suscripción en el sistema.");
+            pausar();
+            return;
+        }
+
+        Cliente c = opt.get();
+        if (c.isVigente()) {
+            System.out.println("    INGRESO PERMITIDO");
+            System.out.println("     Propietario : " + c.getNombrePropietario());
+            System.out.println("     Celda N°    : " + c.getNumeroCelda());
+            System.out.println("     Vence el    : " + c.getFechaVencimiento().format(Cliente.FMT_DISPLAY));
+            System.out.println("     Estado      : AL DÍA");
         } else {
-            Cliente c = opt.get();
-            if (c.isVigente()) {
-                System.out.println("  ✔  ACCESO PERMITIDO");
-                System.out.println("     Placa       : " + c.getPlaca());
-                System.out.println("     Propietario : " + c.getNombrePropietario());
-                System.out.println("     Celda N°    : " + c.getNumeroCelda());
-                System.out.println("     Vence       : " + c.getFechaVencimiento().format(Cliente.FMT_DISPLAY));
-            } else {
-                System.out.println("  ✘  ACCESO DENEGADO — Mensualidad vencida.");
-                System.out.println("     Placa       : " + c.getPlaca());
-                System.out.println("     Venció el   : " + c.getFechaVencimiento().format(Cliente.FMT_DISPLAY));
-                System.out.println("     Renueve su mensualidad (opción 5 en Mensualidades).");
-            }
+            System.out.println("    INGRESO DENEGADO — MENSUALIDAD VENCIDA");
+            System.out.println("     Propietario : " + c.getNombrePropietario());
+            System.out.println("     Venció el   : " + c.getFechaVencimiento().format(Cliente.FMT_DISPLAY));
+            System.out.println("     Por favor renueve su mensualidad realizando el pago.");
         }
         pausar();
     }
 
     private void flujoConsultarClientes() {
-        imprimirEncabezado("LISTA DE CLIENTES (MENSUALIDADES)");
+        imprimirEncabezado("LISTA DE CLIENTES / MENSUALIDADES");
 
         List<Cliente> clientes = servicio.listarClientes();
         if (clientes.isEmpty()) {
@@ -832,20 +1383,18 @@ public class Menu {
         }
 
         System.out.println();
-        String fmt = "  %-10s %-20s %-13s %-17s %-17s %-8s";
-        System.out.printf(fmt, "PLACA", "PROPIETARIO", "TELÉFONO", "INGRESO", "VENCIMIENTO", "ESTADO");
+        String fmt = "  %-8s │ %-20s │ %-12s │ %-6s │ %-16s │ %-10s";
+        System.out.printf(fmt, "PLACA", "PROPIETARIO", "TELÉFONO", "CELDA", "VENCIMIENTO", "ESTADO");
         System.out.println();
         System.out.println("  " + "─".repeat(90));
 
         for (Cliente c : clientes) {
-            String ing = c.getFechaIngreso()     != null ? c.getFechaIngreso().format(Cliente.FMT_DISPLAY)     : "N/A";
+            String nom = c.getNombrePropietario().length() > 19 ? c.getNombrePropietario().substring(0, 19) : c.getNombrePropietario();
             String ven = c.getFechaVencimiento() != null ? c.getFechaVencimiento().format(Cliente.FMT_DISPLAY) : "N/A";
-            String nom = c.getNombrePropietario().length() > 19
-                         ? c.getNombrePropietario().substring(0, 19)
-                         : c.getNombrePropietario();
             System.out.printf(fmt,
-                c.getPlaca(), nom, c.getTelefono(), ing, ven,
-                c.isVigente() ? "ACTIVO" : "INACTIVO");
+                c.getPlaca(), nom, c.getTelefono(),
+                "N° " + c.getNumeroCelda(), ven,
+                c.isVigente() ? "ACTIVO" : "VENCIDO");
             System.out.println();
         }
 
@@ -859,7 +1408,7 @@ public class Menu {
 
         String placa = leerTextoConPrompt("  Placa a buscar: ").toUpperCase().trim();
         if (placa.isEmpty()) {
-            System.out.println("  [!] Debe ingresar una placa.");
+            System.out.println("   Debe ingresar una placa.");
             pausar();
             return;
         }
@@ -871,7 +1420,7 @@ public class Menu {
             System.out.println();
             System.out.println(opt.get().toString());
         } else {
-            System.out.println("  [!] No se encontró ningún cliente con placa: " + placa);
+            System.out.println("   No se encontró ningún cliente con placa: " + placa);
         }
         pausar();
     }
@@ -881,14 +1430,14 @@ public class Menu {
 
         String placa = leerTextoConPrompt("  Placa del vehículo: ").toUpperCase().trim();
         if (placa.isEmpty()) {
-            System.out.println("  [!] Debe ingresar una placa.");
+            System.out.println("   Debe ingresar una placa.");
             pausar();
             return;
         }
 
         Optional<Cliente> opt = servicio.buscarClientePorPlaca(placa);
         if (opt.isEmpty()) {
-            System.out.println("\n  [!] No se encontró cliente con placa: " + placa);
+            System.out.println("\n   No se encontró cliente con placa: " + placa);
             pausar();
             return;
         }
@@ -896,29 +1445,42 @@ public class Menu {
         Cliente c = opt.get();
         System.out.println("\n  Cliente encontrado:");
         System.out.printf("     Propietario  : %s%n", c.getNombrePropietario());
-        System.out.printf("     Estado actual: %s%n", c.isVigente() ? "ACTIVO" : "INACTIVO");
+        System.out.printf("     Estado actual: %s%n", c.isVigente() ? "ACTIVO" : "INACTIVO / VENCIDO");
         System.out.printf("     Vencimiento  : %s%n", c.getFechaVencimiento().format(Cliente.FMT_DISPLAY));
 
-        String conf = leerTextoConPrompt("\n  ¿Confirma renovación por 30 días? (S/N): ").toUpperCase().trim();
-        if (!"S".equals(conf)) {
+        System.out.println("\n  Opciones de renovación:");
+        System.out.println("  1. Registrar pago del servicio (Recomendado — genera comprobante)");
+        System.out.println("  2. Extensión manual sin pago formal");
+        System.out.println("  0. Cancelar");
+        int op = leerEnteroConPrompt("  Seleccione: ");
+
+        if (op == 1) {
+            flujoRealizarPagoConPlaca(placa);
+        } else if (op == 2) {
+            String conf = leerTextoConPrompt("\n  ¿Confirma renovación por 30 días? (S/N): ").toUpperCase().trim();
+            if (!"S".equals(conf)) {
+                System.out.println("  Operación cancelada.");
+                pausar();
+                return;
+            }
+
+            boolean ok = servicio.renovarCliente(placa);
+            System.out.println();
+            System.out.println(LINEA_SIMPLE);
+            if (ok) {
+                Optional<Cliente> renovado = servicio.buscarClientePorPlaca(placa);
+                System.out.println("    Mensualidad renovada exitosamente.");
+                renovado.ifPresent(r ->
+                    System.out.println("     Nuevo vencimiento: " + r.getFechaVencimiento().format(Cliente.FMT_DISPLAY))
+                );
+            } else {
+                System.out.println("   No se pudo renovar la mensualidad.");
+            }
+            pausar();
+        } else {
             System.out.println("  Operación cancelada.");
             pausar();
-            return;
         }
-
-        boolean ok = servicio.renovarCliente(placa);
-        System.out.println();
-        System.out.println(LINEA_SIMPLE);
-        if (ok) {
-            Optional<Cliente> renovado = servicio.buscarClientePorPlaca(placa);
-            System.out.println("  ✔  Mensualidad renovada exitosamente.");
-            renovado.ifPresent(r ->
-                System.out.println("     Nuevo vencimiento: " + r.getFechaVencimiento().format(Cliente.FMT_DISPLAY))
-            );
-        } else {
-            System.out.println("  [!] No se pudo renovar la mensualidad.");
-        }
-        pausar();
     }
 
     private void flujoEliminarCliente() {
@@ -926,14 +1488,14 @@ public class Menu {
 
         String placa = leerTextoConPrompt("  Placa del cliente a eliminar: ").toUpperCase().trim();
         if (placa.isEmpty()) {
-            System.out.println("  [!] Debe ingresar una placa.");
+            System.out.println("   Debe ingresar una placa.");
             pausar();
             return;
         }
 
         Optional<Cliente> opt = servicio.buscarClientePorPlaca(placa);
         if (opt.isEmpty()) {
-            System.out.println("\n  [!] No se encontró cliente con placa: " + placa);
+            System.out.println("\n   No se encontró cliente con placa: " + placa);
             pausar();
             return;
         }
@@ -943,7 +1505,7 @@ public class Menu {
         System.out.println(c.toString());
 
         if (c.isVigente()) {
-            System.out.println("\n  [!] No se puede eliminar: la mensualidad aún está VIGENTE.");
+            System.out.println("\n  No se puede eliminar: la mensualidad aún está VIGENTE.");
             System.out.println("      Vence el: " + c.getFechaVencimiento().format(Cliente.FMT_DISPLAY));
             pausar();
             return;
@@ -960,17 +1522,17 @@ public class Menu {
         System.out.println();
         System.out.println(LINEA_SIMPLE);
         System.out.println(ok
-            ? "  ✔  Cliente [" + placa + "] eliminado. La celda ha sido liberada."
-            : "  [!] No se pudo eliminar el cliente.");
+            ? "    Cliente [" + placa + "] eliminado. La celda ha sido liberada."
+            : "  No se pudo eliminar el cliente.");
         pausar();
     }
 
     private void mostrarBienvenida() {
         System.out.println();
-        System.out.println("  ╔══════════════════════════════════════════════╗");
-        System.out.println("  ║       PARQUEADERO AUTOS COLOMBIA             ║");
-        System.out.println("  ║           Sistema de Gestión                 ║");
-        System.out.println("  ╚══════════════════════════════════════════════╝");
+        System.out.println("  ╔══════════════════════════════════════════════════════════════════════════════╗");
+        System.out.println("  ║                         PARQUEADERO AUTOS COLOMBIA                           ║");
+        System.out.println("  ║                Sistema de Gestión de Parqueadero                        ║");
+        System.out.println("  ╚══════════════════════════════════════════════════════════════════════════════╝");
         System.out.println();
     }
 

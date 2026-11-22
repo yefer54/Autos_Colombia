@@ -1,0 +1,6 @@
+[
+  {"id": "MP-1", "nombre": "Efectivo", "descripcion": "Pago en efectivo en ventanilla", "habilitado": "true"},
+  {"id": "MP-2", "nombre": "Tarjeta Débito", "descripcion": "Pago con tarjeta débito por datáfono", "habilitado": "true"},
+  {"id": "MP-3", "nombre": "Tarjeta Crédito", "descripcion": "Pago con tarjeta crédito por datáfono o virtual", "habilitado": "true"},
+  {"id": "MP-4", "nombre": "Transferencia Bancaria (Nequi/Daviplata/PSE)", "descripcion": "Pago por transferencia bancaria o billeteras digitales", "habilitado": "true"}
+]
